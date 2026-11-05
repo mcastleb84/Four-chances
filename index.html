@@ -1,47 +1,913 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#102e25"><title>QB Long Ball Challenge</title><style>*{box-sizing:border-box}body{margin:0;background:#0b1717;color:#f3f7f3;font:15px system-ui,-apple-system,sans-serif}.app{max-width:680px;margin:auto;padding:14px}header{display:flex;align-items:center;justify-content:space-between;gap:10px}h1{font-size:23px;margin:8px 0 2px}.sub{color:#a5c7b5;font-size:12px}.score{display:flex;gap:10px;margin:12px 0}.pill{flex:1;background:#19392e;border:1px solid #38644d;border-radius:12px;padding:9px;text-align:center}.pill small{display:block;color:#bad3c5;font-size:11px}.pill strong{font-size:20px}.field{border:3px solid #d5e5d5;border-radius:13px;overflow:hidden;background:#195e3d;position:relative}canvas{display:block;width:100%;height:auto;touch-action:manipulation}.joystick-area{display:flex;align-items:center;gap:18px;margin-top:12px;padding:10px;border:1px solid #42645a;border-radius:14px;background:#152d28}.joystick{width:128px;height:128px;flex:none;position:relative;border-radius:50%;border:2px solid #7ce0a5;background:radial-gradient(circle,#315c4d,#102b25);touch-action:none;user-select:none}.stick{position:absolute;width:52px;height:52px;border-radius:50%;background:#e9c867;border:3px solid #fff0b8;left:36px;top:36px;box-shadow:0 4px 14px #0007;pointer-events:none}.joystick-hint{font-size:13px;line-height:1.5;color:#c9dfd1}.controls{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}button{border:0;border-radius:12px;padding:15px 8px;font-weight:800;font-size:15px;background:#e9c867;color:#17241a;cursor:pointer}button:disabled{opacity:.35;cursor:not-allowed}.snap{grid-column:1/-1;background:#7ce0a5}.reset{background:#294c43;color:#fff}.message{background:#1c332f;border:1px solid #42645a;border-radius:12px;padding:13px;margin:11px 0;min-height:64px;line-height:1.4}.progress{background:#19392e;border-radius:12px;padding:10px;margin-bottom:10px}.progress-label{display:flex;justify-content:space-between;gap:5px;font-size:11px}.progress-track{height:13px;border-radius:8px;background:repeating-linear-gradient(90deg,#246b47 0 10%,#2d7a52 10% 20%);border:1px solid #8ec6a3;margin-top:8px;overflow:hidden}.progress-track>div{height:100%;width:0%;background:#f6ce54;transition:width .4s}.upgrade{margin:10px 0;padding:14px;background:#244b3d;border:2px solid #e9c867;border-radius:12px}.upgrade p{margin:7px 0 12px}.upgrade button{margin-right:8px}.help{font-size:13px;color:#b4cbbf;line-height:1.5}.legend{display:flex;flex-wrap:wrap;gap:11px;font-size:12px;margin-top:10px}.dot{width:11px;height:11px;display:inline-block;border-radius:50%;margin-right:4px}.off{background:#f6ce54}.def{background:#ed626b}.safe{background:#7ab9fa}button:focus-visible{outline:3px solid white;outline-offset:2px}</style></head><body><main class="app"><header><div><h1>🏈 QB Long Ball Challenge</h1><div class="sub">Advance through increasingly difficult levels. Four downs + a final TD chance.</div></div><button class="reset" id="restart">Restart</button></header><section class="score"><div class="pill"><small>LEVEL</small><strong id="level">1</strong></div><div class="pill"><small>DOWN</small><strong id="down">1 / 4</strong></div><div class="pill"><small>YARDS TO GO</small><strong id="toGo">10</strong></div><div class="pill"><small>GAINED</small><strong id="gained">0 yd</strong></div></section><div class="progress"><div class="progress-label"><span>OWN 20</span><strong id="fieldPosition">Ball on OWN 20 · 80 yd to TD</strong><span>END ZONE</span></div><div class="progress-track"><div id="progressFill"></div></div></div><div class="upgrade" id="upgrade" hidden><strong>🏈 Level 3: Second defensive lineman added automatically!</strong><p>Add a second offensive lineman for better pass protection?</p><button id="addLineman">Add lineman</button><button class="reset" id="skipLineman">No thanks</button></div><div class="field"><canvas id="game" width="420" height="600" aria-label="Football game field with quarterback, blocker, two receivers, and defenders"></canvas></div><div class="joystick-area"><div class="joystick" id="joystick" aria-label="Drag to move quarterback"><div class="stick" id="stick"></div></div><div class="joystick-hint"><strong>QB JOYSTICK</strong><div>Drag to move your quarterback and avoid the pass rusher. Stay behind the line of scrimmage!</div></div></div><div class="controls"><button id="routes" class="reset" style="grid-column:1/-1">ROUTES: LEFT GO / RIGHT POST ↻</button><button class="snap" id="snap">SNAP BALL</button><button id="left" disabled>🏈 Throw LEFT</button><button id="right" disabled>🏈 Throw RIGHT</button></div><div class="message" id="message" aria-live="polite">Tap SNAP BALL to begin. Throw to either receiver before the rusher gets to your quarterback!</div><div class="legend"><span><i class="dot off"></i>Offense</span><span><i class="dot def"></i>Defense</span><span><i class="dot safe"></i>Safety</span></div><p class="help">Score a touchdown to unlock the next level. Level 1 is very easy; defenders become faster and coverage tighter each level. From Level 3 onward, the defense automatically adds a second pass rusher; choose whether to add a second blocker. Earn a first down to reset your four downs. Tip: Watch the cornerbacks and safety. A receiver with more separation is easier to complete a pass to. After four downs without a first down, you get exactly one final touchdown-only play. Plays automatically reset and snap after a short pause; you can also tap SNAP BALL immediately. The offense begins on its own 20-yard line. Watch the drawn routes before snapping. After a catch, the receiver runs with the ball until tackled or reaching the end zone. The end zone appears as the drive progresses. Each play ends with a catch, incompletion, interception, or sack. A catch gains yards based on how far downfield the receiver is.</p></main><script>
-(()=>{'use strict';
-const c=document.querySelector('#game'),g=c.getContext('2d'),W=420,H=600,LOS=460,PX=8;
-const el=id=>document.getElementById(id), ui={snap:el('snap'),left:el('left'),right:el('right'),down:el('down'),toGo:el('toGo'),gained:el('gained'),level:el('level'),fieldPosition:el('fieldPosition'),progressFill:el('progressFill'),upgrade:el('upgrade'),message:el('message'),routes:el('routes')};
-let level=1,position=20,down=1,firstTarget=30,bonus=false,extra=false,upgrade=false,phase='ready',clock=0,last=0,players={},ball=null,selected='',runner=null,routeSet=0,joy={x:0,y:0},timer=null,playStart=20,runStart=0;
-const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),mix=(a,b,t)=>a+(b-a)*t;
-function say(t){ui.message.textContent=t}
-function refresh(){ui.level.textContent=level;ui.down.textContent=bonus?'BONUS':down+' / 4';ui.toGo.textContent=bonus?'TD':Math.max(1,firstTarget-position);ui.gained.textContent=Math.max(0,position-20)+' yd';ui.fieldPosition.textContent='Ball on '+(position<=50?'OWN '+position:'OPP '+(100-position))+' · '+(100-position)+' yd to TD';ui.progressFill.style.width=((position-20)/80*100)+'%';ui.snap.disabled=phase!=='ready'||upgrade;ui.left.disabled=ui.right.disabled=phase!=='live';ui.routes.disabled=phase!=='ready';ui.upgrade.hidden=!upgrade;ui.snap.textContent=phase==='ready'?'SNAP BALL':phase==='over'?'GAME OVER':'PLAY IN PROGRESS';ui.routes.textContent=routeSet===0?'ROUTES: LEFT GO / RIGHT POST ↻':'ROUTES: LEFT POST / RIGHT GO ↻'}
-function setup(){clock=0;ball=null;runner=null;selected='';phase='ready';players={qb:{x:210,y:510},center:{x:210,y:460},ol:{x:254,y:465},dl:{x:205,y:414},dl2:{x:265,y:415},left:{x:75,y:455},right:{x:345,y:455},cbL:{x:78,y:420},cbR:{x:342,y:420},safety:{x:210,y:260}};refresh()}
-function restart(){clearTimeout(timer);level=1;position=20;down=1;firstTarget=30;bonus=false;extra=false;upgrade=false;routeSet=0;setup();say('Choose your routes, then SNAP BALL. Drive from your own 20 to the far end zone!')}
-function snap(){clearTimeout(timer);if(phase!=='ready'||upgrade)return;phase='live';clock=0;playStart=position;say(bonus?'FINAL TOUCHDOWN PLAY! You must reach the end zone on this play.':'Routes are live! Dodge the rush and throw to an open receiver.');refresh()}
-function route(side,t){const go=(side==='left')===(routeSet===0),base=side==='left'?75:345,sign=side==='left'?1:-1;const y=455-Math.min(330,t*83);const x=go?base:base+sign*Math.min(116,Math.max(0,t-1.05)*62);return {x,y}}
-function throwPass(side){if(phase!=='live')return;selected=side;const r=players[side];ball={x:players.qb.x,y:players.qb.y,from:{...players.qb},to:{...r},time:0,duration:clamp(dist(players.qb,r)/350,.55,1.25)};phase='flight';say('Pass in the air to '+side.toUpperCase()+' receiver!');refresh()}
-function schedule(t){setup();say(t+' Next snap in 2 seconds, or tap SNAP BALL.');timer=setTimeout(()=>{if(phase==='ready'&&!upgrade)snap()},2000)}
-function endPlay(type,at=position){if(!['live','flight','run'].includes(phase))return;phase='transition';ball=null;runner=null;let message='';if(type==='catch'){position=clamp(Math.round(at),1,100);message='Completed pass! Ball spotted at the '+position+' yard line.';if(position>=100){touchdown();return}}else if(type==='sack'){position=Math.max(1,position-3);message='SACK! Lost 3 yards.'}else if(type==='interception'){phase='over';say('INTERCEPTION! GAME OVER. Tap Restart.');refresh();return}else message='Incomplete pass.';
-if(bonus){phase='over';say(message+' Final touchdown attempt failed. GAME OVER. Tap Restart.');refresh();return}
-if(position>=firstTarget){down=1;firstTarget=Math.min(100,position+10);schedule(message+' FIRST DOWN! Four fresh downs.');return}
-if(down===4){bonus=true;schedule(message+' Four downs used. ONE BONUS TOUCHDOWN ATTEMPT!');return}
-down++;schedule(message+' Down '+down+' of 4.');}
-function touchdown(){clearTimeout(timer);phase='celebrate';say('🏈 TOUCHDOWN! Level '+level+' complete!');refresh();timer=setTimeout(()=>{level++;position=20;down=1;firstTarget=30;bonus=false;setup();if(level===3){upgrade=true;say('LEVEL 3: Defense automatically adds a SECOND pass rusher. Add another offensive blocker?')}else say('LEVEL '+level+'! Defense is faster. Choose routes and snap!');refresh()},2400)}
-function update(dt){if(!['live','flight','run'].includes(phase))return;clock+=dt;let t=clock;for(const side of ['left','right']){if(phase==='run'&&selected===side)continue;const p=route(side,t);players[side].x=p.x;players[side].y=p.y}
-for(const [cb,wr] of [['cbL','left'],['cbR','right']]){const d=players[cb],r=players[wr],f=clamp(dt*(level===1?1.25:1.35+level*.3),0,1);d.x=mix(d.x,r.x+(cb==='cbL'?9:-9),f);d.y=mix(d.y,r.y+19,f)}
-const safety=players.safety;safety.x=mix(safety.x,(players.left.y<players.right.y?players.left.x:players.right.x),dt*.5);safety.y=mix(safety.y,Math.min(players.left.y,players.right.y)-55,dt*.55);
-if(phase==='live'){const q=players.qb;q.x=clamp(q.x+joy.x*dt*140,20,400);q.y=clamp(q.y+joy.y*dt*140,LOS+23,580)}
-for(const [i,name] of ['dl','dl2'].entries()){if(i===1&&level<3)continue;const r=players[name],q=players.qb,block=players[i===0?'center':extra?'ol':'center'];r.x=mix(r.x,q.x+(i===0?-9:9),dt*(.85+level*.12));const blocked=Math.abs(r.x-block.x)<33&&r.y<LOS+13; r.y+=dt*(blocked?9:20+level*10);if(phase==='live'&&dist(r,q)<25){endPlay('sack');return}}
-players.center.x=mix(players.center.x,players.dl.x,dt*2);if(extra)players.ol.x=mix(players.ol.x,players.dl2.x,dt*2);
-if(phase==='live'&&t>Math.max(3.7,8.5-level*.55)){endPlay('sack');return}
-if(phase==='flight'&&ball){ball.time+=dt;const k=clamp(ball.time/ball.duration,0,1);ball.x=mix(ball.from.x,ball.to.x,k);ball.y=mix(ball.from.y,ball.to.y,k)-26*Math.sin(Math.PI*k);if(k>=1){const rec=players[selected],cb=players[selected==='left'?'cbL':'cbR'],gap=dist(rec,cb),safe=dist(rec,players.safety);const chance=clamp(.94-(level-1)*.07+(gap-26)*.0025+(safe-75)*.001,.22,.97);if(Math.random()<chance){phase='run';runStart=clock;runner={side:selected,x:rec.x,y:rec.y,spot:playStart+Math.max(2,Math.round((LOS-rec.y)/PX)),speed:level===1?14:11};say('CAUGHT! Receiver running upfield — defenders closing in!')}else{endPlay(safe<35&&Math.random()<.14?'interception':'incomplete');return}ball=null}}
-if(phase==='run'&&runner){const r=runner;const speed=r.speed*dt;r.spot=Math.min(100,r.spot+speed);r.y=Math.max(45,r.y-speed*PX);r.x=clamp(r.x+(r.x<210?1:-1)*dt*5,20,400);players[selected].x=r.x;players[selected].y=r.y;const cb=players[selected==='left'?'cbL':'cbR'];cb.x=mix(cb.x,r.x,dt*(1.6+level*.35));cb.y=mix(cb.y,r.y+5,dt*(1.2+level*.25));safety.x=mix(safety.x,r.x,dt*(.75+level*.12));safety.y=mix(safety.y,r.y-6,dt*(.75+level*.12));if(r.spot>=100){endPlay('catch',100);return}if(dist(cb,r)<19||dist(safety,r)<19||clock-runStart>2.5){endPlay('catch',r.spot);return}}
+
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>QB Long Ball Challenge</title>
+
+<style>
+
+*{box-sizing:border-box}
+
+body{
+
+ margin:0;background:#101b2b;color:white;
+
+ font-family:Arial,sans-serif;text-align:center
+
 }
-function line(x,y,xx,yy,color,width=2,dash=[]){g.beginPath();g.setLineDash(dash);g.lineWidth=width;g.strokeStyle=color;g.moveTo(x,y);g.lineTo(xx,yy);g.stroke();g.setLineDash([])}
-function label(t,x,y,size=12,color='white'){g.font='bold '+size+'px system-ui';g.fillStyle=color;g.textAlign='center';g.fillText(t,x,y)}
-function dot(p,color,name){g.fillStyle=color;g.beginPath();g.arc(p.x,p.y,12,0,Math.PI*2);g.fill();g.strokeStyle='#122a21';g.lineWidth=2;g.stroke();label(name,p.x,p.y+4,9,'#14291f')}
-function draw(){g.fillStyle='#17633e';g.fillRect(0,0,W,H);const ballSpot=position;const goal=LOS-(100-ballSpot)*PX;
-for(let y=0;y<H;y+=40){g.fillStyle=(Math.floor(y/40)%2)?'#ffffff08':'#00000008';g.fillRect(0,y,W,40)}
-for(let yd=0;yd<=100;yd+=5){const y=LOS-(yd-ballSpot)*PX;if(y<0||y>H)continue;line(8,y,412,y,'#ffffff65',yd%10===0?2:1);if(yd%10===0){const n=yd<=50?yd:100-yd;label(String(n),32,y-7,12,'#e7fff0');label(String(n),388,y-7,12,'#e7fff0')}}
-if(goal>=0){g.fillStyle='#183f89';g.fillRect(0,0,W,Math.min(H,goal));line(0,goal,W,goal,'#fff',5);if(goal>40)label('END ZONE',210,Math.min(goal/2,90),24)}else{g.fillStyle='#173b81';g.fillRect(0,0,W,34);label('END ZONE · '+(100-position)+' YDS AWAY',210,23,13)}
-line(0,LOS,W,LOS,'#f6d56e',4);label('LINE OF SCRIMMAGE',210,LOS-9,11,'#ffe6a4');const marker=LOS-(firstTarget-position)*PX;if(!bonus&&marker>=0&&marker<H){line(0,marker,W,marker,'#7fe5ff',3,[10,6]);label('FIRST DOWN',210,marker-7,12,'#b9f5ff')}
-if(phase==='ready'||phase==='live'){for(const side of ['left','right']){const start=route(side,0),a=route(side,1.4),b=route(side,3.2);line(start.x,start.y,a.x,a.y,side==='left'?'#ffe07b':'#b3f4ff',3,[8,6]);line(a.x,a.y,b.x,b.y,side==='left'?'#ffe07b':'#b3f4ff',3,[8,6]);label('➤',b.x,b.y-5,18,side==='left'?'#ffe07b':'#b3f4ff')}}
-if(bonus)label('BONUS PLAY — TOUCHDOWN ONLY',210,58,14,'#ffe59b');
-dot(players.safety,'#7ab9fa','S');dot(players.cbL,'#ee6d77','CB');dot(players.cbR,'#ee6d77','CB');dot(players.dl,'#ee6d77','DL');if(level>=3)dot(players.dl2,'#ee6d77','DL');dot(players.left,'#f6ce54','WR');dot(players.right,'#f6ce54','WR');dot(players.center,'#f6ce54','C');if(extra)dot(players.ol,'#f6ce54','OL');dot(players.qb,'#f6ce54','QB');if(ball){g.fillStyle='#9e5b31';g.beginPath();g.ellipse(ball.x,ball.y,9,5,-.4,0,Math.PI*2);g.fill()}
-if(phase==='celebrate'||phase==='over'){g.fillStyle='#061a13d9';g.fillRect(0,245,W,110);label(phase==='celebrate'?'🏈 TOUCHDOWN!':'GAME OVER',210,307,30,'#ffe08a')}}
-function frame(ts){const dt=last?Math.min(.04,(ts-last)/1000):0;last=ts;update(dt);draw();requestAnimationFrame(frame)}
-const pad=el('joystick'),stick=el('stick');function move(e){const r=pad.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),m=Math.max(1,Math.hypot(dx,dy)),f=Math.min(1,38/m);joy.x=dx*f/38;joy.y=dy*f/38;stick.style.transform=`translate(${joy.x*38}px,${joy.y*38}px)`}function release(){joy.x=joy.y=0;stick.style.transform='translate(0,0)'}pad.addEventListener('pointerdown',e=>{pad.setPointerCapture(e.pointerId);move(e)});pad.addEventListener('pointermove',e=>{if(pad.hasPointerCapture(e.pointerId))move(e)});pad.addEventListener('pointerup',release);pad.addEventListener('pointercancel',release);
-ui.snap.onclick=snap;ui.left.onclick=()=>throwPass('left');ui.right.onclick=()=>throwPass('right');el('restart').onclick=restart;ui.routes.onclick=()=>{routeSet=1-routeSet;refresh()};el('addLineman').onclick=()=>{extra=true;upgrade=false;refresh();say('Second blocker added. Tap SNAP BALL!')};el('skipLineman').onclick=()=>{upgrade=false;refresh();say('One blocker selected. Tap SNAP BALL!')};c.addEventListener('click',e=>{if(phase!=='live')return;const rect=c.getBoundingClientRect();throwPass((e.clientX-rect.left)<rect.width/2?'left':'right')});window.addEventListener('keydown',e=>{const keys={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};if(keys[e.key]){e.preventDefault();[joy.x,joy.y]=keys[e.key]}});window.addEventListener('keyup',e=>{if(e.key.startsWith('Arrow'))release()});restart();requestAnimationFrame(frame);
-})();
-</script></body></html>
+
+header{background:#1d3045;padding:12px}
+
+h1{font-size:23px;margin:5px}
+
+#scoreboard{
+
+ display:flex;justify-content:space-around;
+
+ flex-wrap:wrap;gap:8px;padding:12px;
+
+ background:#28455b;font-weight:bold
+
+}
+
+#message{padding:12px;min-height:48px;color:#ffe28a}
+
+canvas{
+
+ display:block;width:min(100%,500px);
+
+ height:auto;margin:auto;background:#28723a;
+
+ touch-action:none
+
+}
+
+.controls{
+
+ max-width:500px;margin:10px auto;
+
+ display:flex;justify-content:center;
+
+ gap:8px;flex-wrap:wrap;padding:8px
+
+}
+
+button,select{
+
+ border:0;border-radius:9px;padding:12px;
+
+ font-size:14px;font-weight:bold;
+
+ background:#f3bf40;color:#142437
+
+}
+
+button:disabled{opacity:.4}
+
+#stick{
+
+ width:115px;height:115px;margin:10px auto;
+
+ background:#364c62;border:3px solid #8ba4bb;
+
+ border-radius:50%;position:relative;
+
+ touch-action:none
+
+}
+
+#knob{
+
+ width:38px;height:38px;border-radius:50%;
+
+ background:#f3bf40;position:absolute;
+
+ left:35px;top:35px;pointer-events:none
+
+}
+
+small{color:#cbd7e1}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<h1>🏈 QB LONG BALL CHALLENGE</h1>
+
+<small>Drive downfield and score a touchdown!</small>
+
+</header>
+
+<div id="scoreboard">
+
+<span id="level">Level 1</span>
+
+<span id="down">1st & 10</span>
+
+<span id="yard">Own 20</span>
+
+<span id="td">TDs: 0</span>
+
+</div>
+
+<div id="message">Choose routes and snap the ball!</div>
+
+<canvas id="field" width="400" height="610"></canvas>
+
+<div class="controls">
+
+<select id="leftRoute">
+
+<option value="go">Left: Go</option>
+
+<option value="post">Left: Post</option>
+
+<option value="slant">Left: Slant</option>
+
+</select>
+
+<select id="rightRoute">
+
+<option value="go">Right: Go</option>
+
+<option value="post">Right: Post</option>
+
+<option value="slant">Right: Slant</option>
+
+</select>
+
+<button id="snap">SNAP BALL</button>
+
+<button id="throwL">THROW LEFT</button>
+
+<button id="throwR">THROW RIGHT</button>
+
+<button id="blocker" hidden>Add Offensive Lineman</button>
+
+<button id="restart">RESTART</button>
+
+</div>
+
+<div id="stick"><div id="knob"></div></div>
+
+<small>Move the quarterback using the joystick.</small>
+
+<script>
+
+"use strict";
+
+const canvas=document.getElementById("field");
+
+const ctx=canvas.getContext("2d");
+
+const $=id=>document.getElementById(id);
+
+const W=400,H=610;
+
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+
+const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+
+let level=1,touchdowns=0;
+
+let ball=20,down=1,toGo=10,bonus=false;
+
+let extraBlock=false,phase="ready";
+
+let line=20,playTime=0,transition=0;
+
+let qb,receivers=[],corners=[],rushers=[];
+
+let blockers=[],safety,pass=null,carrier=null;
+
+let joyX=0,joyY=0,lastTime=0;
+
+function message(t){$("message").textContent=t}
+
+function yardText(y){
+
+ return y<=50?"Own "+Math.round(y):
+
+ "Opp "+Math.round(100-y);
+
+}
+
+function updateUI(){
+
+ $("level").textContent="Level "+level;
+
+ $("down").textContent=bonus?"FINAL TD SHOT":
+
+ ["1st","2nd","3rd","4th"][down-1]+" & "+toGo;
+
+ $("yard").textContent=yardText(ball);
+
+ $("td").textContent="TDs: "+touchdowns;
+
+ $("blocker").hidden=level<3||extraBlock;
+
+ $("snap").disabled=phase!=="ready";
+
+ $("throwL").disabled=phase!=="live";
+
+ $("throwR").disabled=phase!=="live";
+
+}
+
+function player(x,y,type){
+
+ return {x,y,type,active:true};
+
+}
+
+function setup(){
+
+ phase="ready";
+
+ line=ball;
+
+ playTime=0;
+
+ pass=null;
+
+ carrier=null;
+
+ qb=player(200,line-5,"QB");
+
+ receivers=[
+
+ {...player(85,line+1,"WR"),
+
+ route:$("leftRoute").value,side:1},
+
+ {...player(315,line+1,"WR"),
+
+ route:$("rightRoute").value,side:-1}
+
+ ];
+
+ corners=[
+
+ player(85,line+7,"CB"),
+
+ player(315,line+7,"CB")
+
+ ];
+
+ safety=player(200,line+27,"S");
+
+ rushers=[player(170,line+3,"DL")];
+
+ if(level>=3){
+
+ rushers.push(player(230,line+3,"DL"));
+
+ }
+
+ blockers=[player(185,line-1,"OL")];
+
+ if(extraBlock){
+
+ blockers.push(player(215,line-1,"OL"));
+
+ }
+
+ updateUI();
+
+}
+
+function routePoint(r,t){
+
+ let forward=Math.min(t*9,45);
+
+ let x=r.side===1?85:315;
+
+ if(r.route==="post"&&forward>12){
+
+ x+=r.side*Math.min((forward-12)*3,100);
+
+ }
+
+ if(r.route==="slant"){
+
+ x+=r.side*Math.min(forward*2.5,90);
+
+ }
+
+ return {
+
+ x:clamp(x,20,380),
+
+ y:line+1+forward
+
+ };
+
+}
+
+function startPlay(){
+
+ if(phase!=="ready")return;
+
+ phase="live";
+
+ playTime=0;
+
+ message(bonus?
+
+ "FINAL PLAY! You must score!":
+
+ "Receivers running! Find an open target!");
+
+ updateUI();
+
+}
+
+function finishPlay(text,gain=0){
+
+ if(phase==="result"||phase==="over")return;
+
+ phase="result";
+
+ transition=1.2;
+
+ ball=clamp(ball+Math.max(0,gain),0,100);
+
+ if(ball>=100){
+
+ touchdowns++;
+
+ level++;
+
+ ball=20;
+
+ down=1;
+
+ toGo=10;
+
+ bonus=false;
+
+ extraBlock=false;
+
+ message("TOUCHDOWN! Level "+level+" unlocked!");
+
+ }
+
+ else if(bonus){
+
+ phase="over";
+
+ message(text+" GAME OVER! Restart to try again.");
+
+ }
+
+ else if(gain>=toGo){
+
+ down=1;
+
+ toGo=Math.min(10,100-ball);
+
+ message(text+" FIRST DOWN!");
+
+ }
+
+ else{
+
+ toGo=Math.max(1,toGo-gain);
+
+ down++;
+
+ if(down>4){
+
+ bonus=true;
+
+ down=4;
+
+ message(text+" FINAL TOUCHDOWN CHANCE!");
+
+ }else{
+
+ message(text+" Next down!");
+
+ }
+
+ }
+
+ updateUI();
+
+}
+
+function throwBall(index){
+
+ if(phase!=="live"||pass)return;
+
+ const r=receivers[index];
+
+ pass={
+
+ x:qb.x,y:qb.y,
+
+ target:r,
+
+ time:0,
+
+ duration:0.6
+
+ };
+
+ message("Pass in the air!");
+
+}
+
+function moveToward(p,target,speed,dt){
+
+ const dx=target.x-p.x;
+
+ const dy=target.y-p.y;
+
+ const d=Math.hypot(dx,dy)||1;
+
+ const step=Math.min(d,speed*dt);
+
+ p.x+=dx/d*step;
+
+ p.y+=dy/d*step;
+
+}
+
+function update(dt){
+
+ if(phase==="result"){
+
+ transition-=dt;
+
+ if(transition<=0){
+
+ setup();
+
+ message(bonus?
+
+ "FINAL TOUCHDOWN ATTEMPT! Snap the ball.":
+
+ "Next play ready. Snap the ball!");
+
+ }
+
+ return;
+
+ }
+
+ if(phase!=="live")return;
+
+ playTime+=dt;
+
+ qb.x=clamp(qb.x+joyX*85*dt,25,375);
+
+ qb.y=clamp(qb.y+joyY*7*dt,line-13,line);
+
+ receivers.forEach((r,i)=>{
+
+ if(carrier===r)return;
+
+ const p=routePoint(r,playTime);
+
+ moveToward(r,p,55,dt);
+
+ moveToward(corners[i],{
+
+ x:r.x+(i===0?10:-10),
+
+ y:r.y-2
+
+ },(38+level*3),dt);
+
+ });
+
+ rushers.forEach((r,i)=>{
+
+ let blocked=false;
+
+ blockers.forEach(b=>{
+
+ if(distance(r,b)<8){
+
+ blocked=true;
+
+ }
+
+ });
+
+ if(!blocked){
+
+ moveToward(r,qb,12+level*2.5,dt);
+
+ }
+
+ if(distance(r,qb)<5&&!carrier){
+
+ finishPlay("Quarterback sacked!",0);
+
+ }
+
+ });
+
+ blockers.forEach((b,i)=>{
+
+ const target=rushers[i%rushers.length];
+
+ moveToward(b,target,16,dt);
+
+ });
+
+ if(carrier){
+
+ carrier.y+=12*dt;
+
+ const defender=corners[receivers.indexOf(carrier)];
+
+ moveToward(defender,carrier,10+level*2,dt);
+
+ moveToward(safety,carrier,12+level*2,dt);
+
+ if(carrier.y>=100){
+
+ finishPlay("Touchdown!",100-line);
+
+ }
+
+ else if(distance(defender,carrier)<6||
+
+ distance(safety,carrier)<6){
+
+ finishPlay("Completed pass!",Math.floor(carrier.y-line));
+
+ }
+
+ return;
+
+ }
+
+ if(pass){
+
+ pass.time+=dt;
+
+ const progress=clamp(pass.time/pass.duration,0,1);
+
+ pass.x=qb.x+(pass.target.x-qb.x)*progress;
+
+ pass.y=qb.y+(pass.target.y-qb.y)*progress;
+
+ if(progress>=1){
+
+ const defender=corners[receivers.indexOf(pass.target)];
+
+ if(distance(defender,pass.target)<4&&
+
+ Math.random()<Math.min(.55,.12+level*.035)){
+
+ pass=null;
+
+ finishPlay("Pass defended!",0);
+
+ }else{
+
+ carrier=pass.target;
+
+ pass=null;
+
+ message("CAUGHT! Run after catch!");
+
+ }
+
+ }
+
+ }
+
+ if(playTime>8&&!carrier){
+
+ finishPlay("Play clock expired!",0);
+
+ }
+
+}
+
+function drawPlayer(p,color,label){
+
+ const y=screenY(p.y);
+
+ if(y< -20||y>H+20)return;
+
+ ctx.beginPath();
+
+ ctx.fillStyle=color;
+
+ ctx.arc(p.x,y,8,0,Math.PI*2);
+
+ ctx.fill();
+
+ ctx.fillStyle="white";
+
+ ctx.font="bold 9px Arial";
+
+ ctx.textAlign="center";
+
+ ctx.fillText(label,p.x,y+3);
+
+}
+
+function screenY(y){
+
+ return H-105-(y-ball)*5.3;
+
+}
+
+function drawField(){
+
+ ctx.fillStyle="#28723a";
+
+ ctx.fillRect(0,0,W,H);
+
+ for(let y=0;y<=100;y+=5){
+
+ const sy=screenY(y);
+
+ if(sy<0||sy>H)continue;
+
+ ctx.strokeStyle="rgba(255,255,255,.5)";
+
+ ctx.beginPath();
+
+ ctx.moveTo(0,sy);
+
+ ctx.lineTo(W,sy);
+
+ ctx.stroke();
+
+ if(y%10===0){
+
+ ctx.fillStyle="white";
+
+ ctx.font="13px Arial";
+
+ ctx.fillText(String(y<=50?y:100-y),22,sy-5);
+
+ ctx.fillText(String(y<=50?y:100-y),375,sy-5);
+
+ }
+
+ }
+
+ const end=screenY(100);
+
+ if(end>=0&&end<=H){
+
+ ctx.fillStyle="#123f8a";
+
+ ctx.fillRect(0,0,W,end);
+
+ ctx.fillStyle="white";
+
+ ctx.font="bold 25px Arial";
+
+ ctx.fillText("TOUCHDOWN",W/2,Math.max(28,end/2));
+
+ }
+
+ const los=screenY(line);
+
+ ctx.strokeStyle="#55c7ff";
+
+ ctx.lineWidth=3;
+
+ ctx.beginPath();
+
+ ctx.moveTo(0,los);
+
+ ctx.lineTo(W,los);
+
+ ctx.stroke();
+
+ const first=screenY(Math.min(100,line+toGo));
+
+ ctx.strokeStyle="#ffdf42";
+
+ ctx.beginPath();
+
+ ctx.moveTo(0,first);
+
+ ctx.lineTo(W,first);
+
+ ctx.stroke();
+
+ ctx.lineWidth=1;
+
+}
+
+function drawRoutes(){
+
+ if(phase!=="ready")return;
+
+ receivers.forEach(r=>{
+
+ ctx.strokeStyle="#ffeb75";
+
+ ctx.lineWidth=3;
+
+ ctx.setLineDash([7,5]);
+
+ ctx.beginPath();
+
+ ctx.moveTo(r.x,screenY(r.y));
+
+ for(let t=0;t<=5;t+=.2){
+
+ const p=routePoint(r,t);
+
+ ctx.lineTo(p.x,screenY(p.y));
+
+ }
+
+ ctx.stroke();
+
+ ctx.setLineDash([]);
+
+ ctx.lineWidth=1;
+
+ });
+
+}
+
+function draw(){
+
+ ctx.clearRect(0,0,W,H);
+
+ drawField();
+
+ drawRoutes();
+
+ blockers.forEach(b=>drawPlayer(b,"#e9c65b","OL"));
+
+ receivers.forEach(r=>drawPlayer(r,"#198cff","WR"));
+
+ corners.forEach(c=>drawPlayer(c,"#e43c4c","CB"));
+
+ rushers.forEach(r=>drawPlayer(r,"#d52e3d","DL"));
+
+ drawPlayer(safety,"#bd2a39","S");
+
+ drawPlayer(qb,"#ffffff","QB");
+
+ if(pass){
+
+ ctx.fillStyle="#79421e";
+
+ ctx.beginPath();
+
+ ctx.ellipse(pass.x,screenY(pass.y),6,4,0,0,Math.PI*2);
+
+ ctx.fill();
+
+ }
+
+}
+
+function loop(time){
+
+ const dt=Math.min((time-lastTime)/1000||0,.04);
+
+ lastTime=time;
+
+ update(dt);
+
+ draw();
+
+ requestAnimationFrame(loop);
+
+}
+
+$("snap").onclick=startPlay;
+
+$("throwL").onclick=()=>throwBall(0);
+
+$("throwR").onclick=()=>throwBall(1);
+
+$("blocker").onclick=()=>{
+
+ extraBlock=true;
+
+ setup();
+
+ message("Second offensive lineman added!");
+
+};
+
+$("restart").onclick=()=>{
+
+ level=1;
+
+ touchdowns=0;
+
+ ball=20;
+
+ down=1;
+
+ toGo=10;
+
+ bonus=false;
+
+ extraBlock=false;
+
+ setup();
+
+ message("New game! Choose routes and snap!");
+
+};
+
+$("leftRoute").onchange=setup;
+
+$("rightRoute").onchange=setup;
+
+const stick=$("stick");
+
+const knob=$("knob");
+
+function moveStick(e){
+
+ const rect=stick.getBoundingClientRect();
+
+ let x=e.clientX-rect.left-rect.width/2;
+
+ let y=e.clientY-rect.top-rect.height/2;
+
+ const max=36;
+
+ const d=Math.hypot(x,y);
+
+ if(d>max){
+
+ x=x/d*max;
+
+ y=y/d*max;
+
+ }
+
+ joyX=x/max;
+
+ joyY=-y/max;
+
+ knob.style.left=(35+x)+"px";
+
+ knob.style.top=(35+y)+"px";
+
+}
+
+stick.addEventListener("pointerdown",e=>{
+
+ stick.setPointerCapture(e.pointerId);
+
+ moveStick(e);
+
+});
+
+stick.addEventListener("pointermove",e=>{
+
+ if(e.buttons)moveStick(e);
+
+});
+
+function resetStick(){
+
+ joyX=0;
+
+ joyY=0;
+
+ knob.style.left="35px";
+
+ knob.style.top="35px";
+
+}
+
+stick.addEventListener("pointerup",resetStick);
+
+stick.addEventListener("pointercancel",resetStick);
+
+setup();
+
+requestAnimationFrame(loop);
+
+</script>
+
+</body>
+
+</html>
